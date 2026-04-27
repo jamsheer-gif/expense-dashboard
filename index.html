@@ -35,7 +35,7 @@ let dataAll=[];let lineChart=null;let pieChart=null;
 function money(v){return '₹'+Number(v).toLocaleString('en-IN');}
 function num(v){return parseFloat(String(v||0).replace(/,/g,''))||0;}
 function isMonth(v){return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(String(v||'').trim());}
-async function getSheet(sheet){const txt=await fetch(sheet.url).then(r=>r.text());const rows=Papa.parse(txt).data;return rows.map(r=>({partner:sheet.name,month:String(r[1]||'').trim(),invoice:String(r[2]||'').trim(),amount:num(r[3]),verified:String(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month));}
+async function getSheet(sheet){const txt=await fetch(sheet.url).then(r=>r.text());const rows=Papa.parse(txt).data;return rows.map(r=>{const month=String(r[1]||'').trim();const invoice=String(r[2]||'').trim();let amount=0;for(let i=3;i<r.length;i++){const n=num(r[i]);if(n>0){amount=n;break;}}const verified=r.map(v=>String(v||'').trim().toLowerCase()).includes('verified');return {partner:sheet.name,month:month,invoice:invoice,amount:amount,verified:verified};}).filter(x=>isMonth(x.month));}
 async function load(){dataAll=(await Promise.all(sheets.map(getSheet))).flat();initFilters();render();}
 function initFilters(){partner.innerHTML='<option>All Partners</option>'+sheets.map(s=>'<option>'+s.name+'</option>').join('');}
 function filtered(){return dataAll.filter(r=>{const p=partner.value;const s=status.value;return (p==='All Partners'||r.partner===p)&&(s==='All Status'||(s==='Verified'?r.verified:!r.verified));});}
