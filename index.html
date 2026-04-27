@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}select,button{padding:10px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.label{font-size:12px;color:#94a3b8}.value{font-size:32px;font-weight:700;margin-top:6px}.charts{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-top:14px}canvas{background:#1e293b;border-radius:16px;padding:10px;min-height:220px}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}.muted{color:#94a3b8;font-size:12px;margin-top:6px}@media(max-width:900px){.charts{grid-template-columns:1fr}}
+body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}select,button{padding:10px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.label{font-size:12px;color:#94a3b8}.value{font-size:32px;font-weight:700;margin-top:6px}.charts{display:grid;grid-template-columns:1fr .7fr;gap:14px;margin-top:14px}canvas{background:#1e293b;border-radius:16px;padding:10px;min-height:170px}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}.muted{color:#94a3b8;font-size:12px;margin-top:6px}@media(max-width:900px){.charts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -19,8 +19,8 @@ body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{
 <button id='auto'>Auto Refresh: Off</button>
 </div>
 <div class='grid' id='kpis'></div><div class='grid' id='partnerCards' style='margin-top:14px'></div>
-<div class='charts'><canvas id='lineChart'></canvas><canvas id='pieChart'></canvas></div>
 <div class='tablebox'><table><thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody id='tbody'></tbody></table></div>
+<div class='charts' style='margin-top:18px'><canvas id='lineChart'></canvas><canvas id='pieChart'></canvas></div>
 <div class='muted' id='foot'></div><div class='muted'>Tip: Use filters to isolate partner/status. Auto refresh checks every 60 sec.</div>
 </div>
 <script>
