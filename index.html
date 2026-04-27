@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Expense Dashboard Stable</title>
+<title>Expense Dashboard Final</title>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}select,button{padding:10px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.label{font-size:12px;color:#94a3b8}.value{font-size:32px;font-weight:700;margin-top:6px}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}
@@ -21,6 +21,11 @@ body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{
 <div class="tablebox"><table><thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody id="tbody"></tbody></table></div>
 </div>
 <script>
+const partnerEl=document.getElementById('partner');
+const statusEl=document.getElementById('status');
+const refreshEl=document.getElementById('refresh');
+const kpisEl=document.getElementById('kpis');
+const tbodyEl=document.getElementById('tbody');
 const sheets=[
 {name:'Webfolks',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv'},
 {name:'Medrays',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv'},
@@ -30,10 +35,10 @@ function money(v){return '₹'+Number(v).toLocaleString('en-IN');}
 function num(v){return parseFloat(String(v||0).replace(/,/g,''))||0;}
 function isMonth(v){return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(String(v||'').trim());}
 async function fetchSheet(sheet){const txt=await fetch(sheet.url).then(r=>r.text());const rows=Papa.parse(txt).data;return rows.map(r=>({partner:sheet.name,month:String(r[1]||'').trim(),invoice:String(r[2]||'').trim(),amount:num(r[3]),verified:String(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month)&&x.amount>0);}
-async function load(){kpis.innerHTML='<div class="card">Loading...</div>';allData=(await Promise.all(sheets.map(fetchSheet))).flat();partner.innerHTML='<option>All Partners</option>'+sheets.map(s=>'<option>'+s.name+'</option>').join('');render();}
-function filtered(){const p=partner.value,s=status.value;return allData.filter(r=>(p==='All Partners'||r.partner===p)&&(s==='All Status'||(s==='Verified'?r.verified:!r.verified)));}
-function render(){const d=filtered();const total=d.reduce((a,b)=>a+b.amount,0);const verified=d.filter(x=>x.verified).length;const latest=d.length?d[d.length-1].month:'-';const latestTotal=d.filter(x=>x.month===latest).reduce((a,b)=>a+b.amount,0);kpis.innerHTML='<div class="card"><div class="label">TOTAL INVOICED</div><div class="value">'+money(total)+'</div></div><div class="card"><div class="label">VERIFIED COUNT</div><div class="value">'+verified+'</div></div><div class="card"><div class="label">LATEST MONTH</div><div class="value">'+latest+'</div></div><div class="card"><div class="label">LATEST TOTAL</div><div class="value">'+money(latestTotal)+'</div></div>';tbody.innerHTML=d.map(r=>'<tr><td>'+r.partner+'</td><td>'+r.month+'</td><td>'+r.invoice+'</td><td>'+money(r.amount)+'</td><td>'+(r.verified?'Verified':'Pending')+'</td></tr>').join('');}
-partner.onchange=render;status.onchange=render;refresh.onclick=load;load();
+async function load(){kpisEl.innerHTML='<div class="card">Loading...</div>';allData=(await Promise.all(sheets.map(fetchSheet))).flat();partnerEl.innerHTML='<option>All Partners</option>'+sheets.map(s=>'<option>'+s.name+'</option>').join('');render();}
+function filtered(){const p=partnerEl.value;const s=statusEl.value;return allData.filter(r=>(p==='All Partners'||r.partner===p)&&(s==='All Status'||(s==='Verified'?r.verified:!r.verified)));}
+function render(){const d=filtered();const total=d.reduce((a,b)=>a+b.amount,0);const verified=d.filter(x=>x.verified).length;const latest=d.length?d[d.length-1].month:'-';const latestTotal=d.filter(x=>x.month===latest).reduce((a,b)=>a+b.amount,0);kpisEl.innerHTML='<div class="card"><div class="label">TOTAL INVOICED</div><div class="value">'+money(total)+'</div></div><div class="card"><div class="label">VERIFIED COUNT</div><div class="value">'+verified+'</div></div><div class="card"><div class="label">LATEST MONTH</div><div class="value">'+latest+'</div></div><div class="card"><div class="label">LATEST TOTAL</div><div class="value">'+money(latestTotal)+'</div></div>';tbodyEl.innerHTML=d.map(r=>'<tr><td>'+r.partner+'</td><td>'+r.month+'</td><td>'+r.invoice+'</td><td>'+money(r.amount)+'</td><td>'+(r.verified?'Verified':'Pending')+'</td></tr>').join('');}
+partnerEl.addEventListener('change',render);statusEl.addEventListener('change',render);refreshEl.addEventListener('click',load);load();
 </script>
 </body>
 </html>
