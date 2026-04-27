@@ -55,9 +55,9 @@ const sheets=[
 
 let allData=[]; let lineChart, donutChart;
 function csvUrl(url){return url}
-function isMonthRow(v){if(!v)return false;v=v.toString().trim().toLowerCase();return new RegExp('^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[- ]?\d{2,4}$').test(v)}
+function isMonthRow(v){if(!v)return false;return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(v.toString().trim())}
 function num(v){return parseFloat((v||'0').toString().replace(/,/g,''))||0}
-async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;const rows=[];for(const row of p){if(!row||!row.length)continue;let idx=-1;for(let i=0;i<row.length;i++){const cell=(row[i]||'').toString().trim();if(new RegExp('^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[- ]?\d{2,4}$','i').test(cell)){idx=i;break;}}if(idx>=0){rows.push({partner:sheet.name,month:(row[idx]||'').trim(),invoice:(row[idx+1]||'').trim(),amount:num(row[idx+2]),verified:(row[idx+3]||'').toString().trim().toLowerCase()==='verified'});}}return rows;}
+async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;return p.map(row=>({partner:sheet.name,month:(row[1]||'').toString().trim(),invoice:(row[2]||'').toString().trim(),amount:num(row[3]),verified:(row[4]||'').toString().trim().toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));
 function currency(v){return '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:0})}
 function latestMonth(data){const arr=[...new Set(data.map(x=>x.month))];return arr[arr.length-1]||''}
 async function loadData(){document.getElementById('kpis').innerHTML='Loading...';allData=(await Promise.all(sheets.map(fetchSheet))).flat();populateFilters();render();}
