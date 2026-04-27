@@ -618,7 +618,8 @@ function parseOverviewRows(rows, partnerName) {
   const invoices = [];
   if (!rows || rows.length === 0) return invoices;
 
-  const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec',
+                  'january','february','march','april','june','july','august','september','october','november','december'];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -638,6 +639,22 @@ function parseOverviewRows(rows, partnerName) {
     }
   }
   return invoices;
+}
+
+function getMonthOrder(monthStr) {
+  const MONTH_MAP = {
+    'jan':0,'feb':1,'mar':2,'apr':3,'may':4,'jun':5,
+    'jul':6,'aug':7,'sep':8,'oct':9,'nov':10,'dec':11,
+    'january':0,'february':1,'march':2,'april':3,'june':5,
+    'july':6,'august':7,'september':8,'october':9,'november':10,'december':11
+  };
+  const lower = monthStr.toLowerCase();
+  const parts = lower.split(/[-\s]/);
+  const mKey = parts[0];
+  const yRaw = parts[1] || '26';
+  const year = yRaw.length === 2 ? 2000 + parseInt(yRaw) : parseInt(yRaw);
+  const mIdx = MONTH_MAP[mKey] ?? 0;
+  return year * 12 + mIdx;
 }
 
 async function loadPartnerData(partner) {
@@ -662,13 +679,6 @@ function formatINR(amount) {
   if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(2) + 'Cr';
   if (amount >= 100000) return '₹' + (amount / 100000).toFixed(2) + 'L';
   return '₹' + Math.round(amount).toLocaleString('en-IN');
-}
-
-function getMonthOrder(monthStr) {
-  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-  const [m, y] = monthStr.toLowerCase().split(' ');
-  const mi = months.indexOf(m);
-  return parseInt(y || '2026') * 12 + mi;
 }
 
 function renderKPIs() {
