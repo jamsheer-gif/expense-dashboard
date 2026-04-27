@@ -2,29 +2,41 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Expense Debug Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirmed Expense Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#0b1220;color:#fff}button{padding:10px 14px;border:none;border-radius:8px;background:#22c55e;font-weight:700;cursor:pointer}pre{background:#111827;padding:14px;border-radius:12px;overflow:auto;white-space:pre-wrap}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #334155;padding:8px;text-align:left}th{background:#1e293b}
+body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}select,button{padding:10px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.label{font-size:12px;color:#94a3b8}.value{font-size:32px;font-weight:700;margin-top:6px}.charts{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}canvas{background:#1e293b;border-radius:16px;padding:10px}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}@media(max-width:900px){.charts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<h1>Expense Dashboard Debug</h1>
-<p>This page fetches one sheet and shows raw parsed rows.</p>
-<button onclick="load()">Load Debug Data</button>
-<h2>Status</h2>
-<div id="status">Waiting...</div>
-<h2>Raw CSV Preview</h2>
-<pre id="raw"></pre>
-<h2>Parsed Rows</h2>
-<table>
-<thead><tr><th>#</th><th>Col A</th><th>Col B</th><th>Col C</th><th>Col D</th><th>Col E</th><th>Col F</th></tr></thead>
-<tbody id="tbody"></tbody>
-</table>
+<header>Live Outsourcing Expense Dashboard</header>
+<div class="wrap">
+<div class="controls">
+<select id="partner"></select>
+<select id="status"><option>All Status</option><option>Verified</option><option>Pending</option></select>
+<button id="refresh">Refresh</button>
+</div>
+<div class="grid" id="kpis"></div>
+<div class="charts"><canvas id="line"></canvas><canvas id="pie"></canvas></div>
+<div class="tablebox"><table><thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody id="tbody"></tbody></table></div>
+</div>
 <script>
-const url='https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv';
-async function load(){try{status.textContent='Fetching...';const txt=await fetch(url).then(r=>r.text());raw.textContent=txt.substring(0,3000);const rows=Papa.parse(txt).data;status.textContent='Loaded '+rows.length+' rows';tbody.innerHTML=rows.slice(0,25).map((r,i)=>'<tr><td>'+i+'</td><td>'+(r[0]||'')+'</td><td>'+(r[1]||'')+'</td><td>'+(r[2]||'')+'</td><td>'+(r[3]||'')+'</td><td>'+(r[4]||'')+'</td><td>'+(r[5]||'')+'</td></tr>').join('');}catch(e){status.textContent='ERROR: '+e.message;}}
+const sheets=[
+{name:'Webfolks',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv'},
+{name:'Medrays',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv'},
+{name:'Axximum',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv'}];
+let allData=[];let lineChart=null;let pieChart=null;
+function money(v){return '₹'+Number(v).toLocaleString('en-IN');}
+function num(v){return parseFloat(String(v||0).replace(/,/g,''))||0;}
+function isMonth(v){return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(String(v||'').trim());}
+async function fetchSheet(sheet){const txt=await fetch(sheet.url).then(r=>r.text());const rows=Papa.parse(txt).data;return rows.map(r=>({partner:sheet.name,month:String(r[1]||'').trim(),invoice:String(r[2]||'').trim(),amount:num(r[3]),verified:String(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month)&&x.amount>0);}
+async function load(){allData=(await Promise.all(sheets.map(fetchSheet))).flat();partner.innerHTML='<option>All Partners</option>'+sheets.map(s=>'<option>'+s.name+'</option>').join('');render();}
+function filtered(){return allData.filter(r=>{const p=partner.value,s=status.value;return (p==='All Partners'||r.partner===p)&&(s==='All Status'||(s==='Verified'?r.verified:!r.verified));});}
+function render(){const d=filtered();const total=d.reduce((a,b)=>a+b.amount,0);const verified=d.filter(x=>x.verified).length;const months=[...new Set(d.map(x=>x.month))];const latest=months[months.length-1]||'-';const latestTotal=d.filter(x=>x.month===latest).reduce((a,b)=>a+b.amount,0);kpis.innerHTML='<div class="card"><div class="label">TOTAL INVOICED</div><div class="value">'+money(total)+'</div></div><div class="card"><div class="label">VERIFIED COUNT</div><div class="value">'+verified+'</div></div><div class="card"><div class="label">LATEST MONTH</div><div class="value">'+latest+'</div></div><div class="card"><div class="label">LATEST TOTAL</div><div class="value">'+money(latestTotal)+'</div></div>';tbody.innerHTML=d.map(r=>'<tr><td>'+r.partner+'</td><td>'+r.month+'</td><td>'+r.invoice+'</td><td>'+money(r.amount)+'</td><td>'+(r.verified?'Verified':'Pending')+'</td></tr>').join('');drawCharts(d,months);}
+function drawCharts(d,months){const colors=['#38bdf8','#22c55e','#f59e0b'];const datasets=sheets.map((s,i)=>({label:s.name,data:months.map(m=>d.filter(x=>x.partner===s.name&&x.month===m).reduce((a,b)=>a+b.amount,0)),borderColor:colors[i],backgroundColor:colors[i],tension:0.3}));if(lineChart)lineChart.destroy();lineChart=new Chart(document.getElementById('line'),{type:'line',data:{labels:months,datasets:datasets},options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'}}}}});const totals=sheets.map(s=>d.filter(x=>x.partner===s.name).reduce((a,b)=>a+b.amount,0));if(pieChart)pieChart.destroy();pieChart=new Chart(document.getElementById('pie'),{type:'doughnut',data:{labels:sheets.map(s=>s.name),datasets:[{data:totals,backgroundColor:colors}]},options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}}}});}
+partner.onchange=render;status.onchange=render;refresh.onclick=load;load();
 </script>
 </body>
 </html>
