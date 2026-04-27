@@ -48,16 +48,16 @@ th{background:#0b1220}
 </div>
 <script>
 const sheets=[
-{name:'Webfolks',id:'15MT_t8xljl1uwrz8IeQ2R9jACQM8uVBtFuHXdD9xnrM'},
-{name:'Medrays',id:'1KItTFr7YHFwKu44QMoxdnfHd4a3LzDWO2eL66vkxAx4'},
-{name:'Axximum',id:'1891aa7KGYBMfgFrHwz9GodEG-ZDViMExXvOCanTLkVE'}
+{name:'Webfolks',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv'},
+{name:'Medrays',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv'},
+{name:'Axximum',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv'}
 ];
-const gid='1508030208';
+
 let allData=[]; let lineChart, donutChart;
-function csvUrl(id){return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`}
+function csvUrl(url){return url}
 function isMonthRow(v){return /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test((v||'').toString().trim())}
 function num(v){return parseFloat((v||'0').toString().replace(/,/g,''))||0}
-async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.id));const t=await r.text();const p=Papa.parse(t).data;return p.map(r=>({partner:sheet.name,month:r[0],invoice:r[1],amount:num(r[2]),verified:(r[3]||'').toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));}
+async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;return p.map(r=>({partner:sheet.name,month:r[0],invoice:r[1],amount:num(r[2]),verified:(r[3]||'').toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));}
 function currency(v){return '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:0})}
 function latestMonth(data){const arr=[...new Set(data.map(x=>x.month))];return arr[arr.length-1]||''}
 async function loadData(){document.getElementById('kpis').innerHTML='Loading...';allData=(await Promise.all(sheets.map(fetchSheet))).flat();populateFilters();render();}
