@@ -55,9 +55,9 @@ const sheets=[
 
 let allData=[]; let lineChart, donutChart;
 function csvUrl(url){return url}
-function isMonthRow(v){return /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test((v||'').toString().trim())}
+function isMonthRow(v){if(!v)return false;v=v.toString().trim().toLowerCase();return new RegExp('^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[- ]?\d{2,4}$').test(v)}
 function num(v){return parseFloat((v||'0').toString().replace(/,/g,''))||0}
-async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;return p.map(r=>({partner:sheet.name,month:r[0],invoice:r[1],amount:num(r[2]),verified:(r[3]||'').toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));}
+async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;return p.map(r=>({partner:sheet.name,month:r[1],invoice:r[2],amount:num(r[3]),verified:(r[4]||'').toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));}
 function currency(v){return '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:0})}
 function latestMonth(data){const arr=[...new Set(data.map(x=>x.month))];return arr[arr.length-1]||''}
 async function loadData(){document.getElementById('kpis').innerHTML='Loading...';allData=(await Promise.all(sheets.map(fetchSheet))).flat();populateFilters();render();}
