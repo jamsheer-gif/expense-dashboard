@@ -3,27 +3,27 @@
 <head>
 <meta charset='UTF-8'>
 <meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>Clean CFO Dashboard</title>
+<title>Infolks Outsourcing Expense Dashboard</title>
 <script src='https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#081225;color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}select,button{padding:10px 14px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.label{font-size:12px;color:#94a3b8}.value{font-size:30px;font-weight:700;margin-top:6px}.muted{font-size:12px;color:#94a3b8}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}.charts{display:grid;grid-template-columns:1fr .7fr;gap:14px;margin-top:14px;align-items:start}canvas{background:#1e293b;border-radius:16px;padding:10px;height:260px !important;max-height:260px;min-height:260px}@media(max-width:900px){.charts{grid-template-columns:1fr}}
+body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#081225,#0f172a);color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}select,button{padding:10px 14px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.18)}.label{font-size:12px;color:#94a3b8}.value{font-size:30px;font-weight:700;margin-top:6px}.muted{font-size:12px;color:#94a3b8}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}.charts{display:grid;grid-template-columns:1fr .7fr;gap:14px;margin-top:14px;align-items:start}canvas{background:#1e293b;border-radius:16px;padding:10px;height:260px !important;max-height:260px;min-height:260px}@media(max-width:900px){.charts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header>Live Outsourcing Expense Dashboard</header>
+<header>Infolks Outsourcing Expense Dashboard<div style='font-size:14px;color:#94a3b8;margin-top:6px;font-weight:400'>Executive Management View</div></header>
 <div class='wrap'>
 <div class='controls'>
 <select id='partner'></select>
 <select id='status'><option>All Status</option><option>Verified</option><option>Pending</option></select>
 <button id='openSheet'>Open Partner Sheet</button>
-<button id='refresh'>Refresh</button>
+<button id='refresh'>Refresh</button><button onclick='window.print()'>Export PDF</button>
 </div>
 <div class='grid' id='kpis'></div>
 <div class='grid' id='extra' style='margin-top:14px'></div>
 <div class='tablebox'><table><thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody id='tbody'></tbody></table></div>
 <div class='charts'><canvas id='bar'></canvas><canvas id='pie'></canvas></div>
-<div class='muted' id='foot' style='margin-top:10px'></div>
+<div class='muted' id='foot' style='margin-top:10px'></div><div class='muted' style='margin-top:6px'>Confidential internal dashboard • Prepared for management review</div>
 </div>
 <script>
 const els={partner:document.getElementById('partner'),status:document.getElementById('status'),open:document.getElementById('openSheet'),refresh:document.getElementById('refresh'),kpis:document.getElementById('kpis'),extra:document.getElementById('extra'),tbody:document.getElementById('tbody'),foot:document.getElementById('foot')};
