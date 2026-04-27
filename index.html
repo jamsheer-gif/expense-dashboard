@@ -552,6 +552,7 @@ const PARTNERS = [
     name: 'Webfolks',
     sheetId: '15MT_t8xljl1uwrz8IeQ2R9jACQM8uVBtFuHXdD9xnrM',
     tab: 'Webfolks Overview',
+    gid: '1508030208',
     color: '#1a5c8a',
     lightColor: '#e6f1fb',
     serviceTab: null
@@ -560,6 +561,7 @@ const PARTNERS = [
     name: 'Medrays',
     sheetId: '1KItTFr7YHFwKu44QMoxdnfHd4a3LzDWO2eL66vkxAx4',
     tab: 'Medrays Overview',
+    gid: '1508030208',
     color: '#7a2e0e',
     lightColor: '#fdf0e8',
     serviceTab: null
@@ -567,7 +569,8 @@ const PARTNERS = [
   {
     name: 'Axximum',
     sheetId: '1891aa7KGYBMfgFrHwz9GodEG-ZDViMExXvOCanTLkVE',
-    tab: null,
+    tab: 'Axximum Overview',
+    gid: '1508030208',
     color: '#1a5c3a',
     lightColor: '#e8f5ee',
     serviceTab: null
@@ -578,34 +581,59 @@ let allInvoices = [];
 let trendChartInst = null;
 let shareChartInst = null;
 
-async function fetchSheet(sheetId, tabName, range) {
-  const encodedTab = encodeURIComponent(tabName);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodedTab}!${range}?key=${API_KEY}`;
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.map(line => {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  });
+}
+
+async function fetchSheetCSV(sheetId, gid) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.values || [];
+  if (!res.ok) throw new Error(`HTTP ${res.status} — sheet may not be publicly shared`);
+  const text = await res.text();
+  if (text.includes('<html') || text.includes('Sign in')) throw new Error('Sheet is not publicly accessible — set sharing to "Anyone with the link"');
+  return parseCSV(text);
 }
 
 async function fetchSheetMeta(sheetId) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?key=${API_KEY}&fields=sheets.properties.title`;
-  const res = await fetch(url);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?key=${API_KEY}&fields=sheets.properties`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
-  return (data.sheets || []).map(s => s.properties.title);
+  return (data.sheets || []).map(s => ({ title: s.properties.title, gid: String(s.properties.sheetId) }));
 }
 
 function parseOverviewRows(rows, partnerName) {
   const invoices = [];
-  for (let i = 1; i < rows.length; i++) {
+  if (!rows || rows.length === 0) return invoices;
+
+  const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+
+  for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length < 1) continue;
-    const month = row[0] || '';
-    const invoiceNum = row[1] || '';
-    const amountRaw = row[2] || '0';
-    const status = row[3] || '';
-    const amount = parseFloat(String(amountRaw).replace(/,/g, '')) || 0;
-    if (month && (amount > 0 || invoiceNum)) {
+    const firstCell = String(row[0] || '').trim().toLowerCase();
+    const isMonthRow = MONTHS.some(m => firstCell.startsWith(m));
+    if (!isMonthRow) continue;
+
+    const month = String(row[0] || '').trim();
+    const invoiceNum = String(row[1] || '').trim();
+    const amountRaw = String(row[2] || '0').replace(/,/g, '').replace(/[^\d.]/g, '');
+    const status = String(row[3] || '').trim();
+    const amount = parseFloat(amountRaw) || 0;
+
+    if (month) {
       invoices.push({ partner: partnerName, month, invoiceNum, amount, status });
     }
   }
@@ -613,20 +641,21 @@ function parseOverviewRows(rows, partnerName) {
 }
 
 async function loadPartnerData(partner) {
-  try {
-    let tabName = partner.tab;
-    if (!tabName) {
+  let gid = partner.gid || '0';
+  if (!partner.tab) {
+    try {
       const tabs = await fetchSheetMeta(partner.sheetId);
-      const overviewTab = tabs.find(t => t.toLowerCase().includes('overview'));
-      tabName = overviewTab || tabs[0];
-      partner.tab = tabName;
+      const overviewTab = tabs.find(t => t.title.toLowerCase().includes('overview'));
+      const chosen = overviewTab || tabs[0];
+      partner.tab = chosen.title;
+      partner.gid = chosen.gid;
+      gid = chosen.gid;
+    } catch(e) {
+      gid = '0';
     }
-    const rows = await fetchSheet(partner.sheetId, tabName, 'A1:F30');
-    return parseOverviewRows(rows, partner.name);
-  } catch (e) {
-    console.error(`Error loading ${partner.name}:`, e);
-    return [];
   }
+  const rows = await fetchSheetCSV(partner.sheetId, gid);
+  return parseOverviewRows(rows, partner.name);
 }
 
 function formatINR(amount) {
@@ -803,12 +832,17 @@ async function loadAllData() {
     allInvoices = [];
     for (const partner of PARTNERS) {
       document.getElementById('loadingText').textContent = `Loading ${partner.name} data...`;
-      const data = await loadPartnerData(partner);
-      allInvoices = allInvoices.concat(data);
+      try {
+        const data = await loadPartnerData(partner);
+        allInvoices = allInvoices.concat(data);
+      } catch(e) {
+        e.partner = partner.name;
+        throw e;
+      }
     }
 
     if (allInvoices.length === 0) {
-      throw new Error('No invoice data found. Please ensure sheets are set to "Anyone with the link can view".');
+      throw new Error('No invoice data found — CSV loaded but no month rows detected. The sheet structure may be different from expected.');
     }
 
     renderKPIs();
@@ -822,7 +856,16 @@ async function loadAllData() {
   } catch (err) {
     const banner = document.getElementById('errorBanner');
     banner.style.display = 'block';
-    banner.textContent = 'Error loading data: ' + err.message + '. Ensure sheets are shared publicly (Anyone with link → Viewer).';
+    const msg = err.message || '';
+    let hint = '';
+    if (msg.includes('403') || msg.includes('API key') || msg.includes('keyInvalid')) {
+      hint = '<br><br><strong>Fix:</strong> Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#7f1d1d">Google Cloud Console → Credentials</a> → click your API key → under <em>Application restrictions</em> select <strong>None</strong> → under <em>API restrictions</em> select <strong>Google Sheets API</strong> → Save.';
+    } else if (msg.includes('400') || msg.includes('parse range')) {
+      hint = '<br><br><strong>Fix:</strong> Tab name mismatch — the sheet overview tab may be named differently. Please share a screenshot of your sheet tabs.';
+    } else if (msg.includes('404')) {
+      hint = '<br><br><strong>Fix:</strong> Sheet not found. Double-check the sheet is shared as "Anyone with the link".';
+    }
+    banner.innerHTML = '<strong>Error loading ' + (err.partner || 'data') + ':</strong> ' + msg + hint;
     document.getElementById('lastUpdated').textContent = 'Error loading';
   } finally {
     document.getElementById('loadingOverlay').style.display = 'none';
