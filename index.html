@@ -2,47 +2,31 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Outsourcing Expense Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outsourcing Expense Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
-header{padding:20px;background:#111827;font-size:24px;font-weight:700}
-.container{padding:20px;max-width:1400px;margin:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.card{background:#1e293b;padding:18px;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
-.label{font-size:12px;color:#94a3b8;text-transform:uppercase}
-.value{font-size:28px;font-weight:700;margin-top:8px}
-.row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
-canvas{background:#1e293b;border-radius:16px;padding:12px}
-.controls{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
-select,button{padding:10px 12px;border-radius:10px;border:none}
-button{background:#22c55e;color:#001b08;font-weight:700;cursor:pointer}
-table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:16px;overflow:hidden}
-th,td{padding:10px;border-bottom:1px solid #334155;text-align:left;font-size:14px}
-th{background:#0b1220}
-@media(max-width:900px){.row{grid-template-columns:1fr}}
+body{margin:0;font-family:Arial,sans-serif;background:#0b1220;color:#fff}header{padding:18px 22px;font-size:34px;font-weight:700}.wrap{padding:18px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}select,button{padding:10px 12px;border-radius:10px;border:none}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px}.small{font-size:12px;color:#94a3b8}.big{font-size:38px;font-weight:700;margin-top:6px}.charts{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}canvas{background:#1e293b;border-radius:16px;padding:10px}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}@media(max-width:900px){.charts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>Live Outsourcing Expense Dashboard</header>
-<div class="container">
+<div class="wrap">
 <div class="controls">
-<select id="partnerFilter"><option value="All">All Partners</option></select>
-<select id="statusFilter"><option value="All">All Status</option><option value="Verified">Verified</option><option value="Pending">Pending</option></select>
+<select id="partner"><option value="All">All Partners</option></select>
+<select id="status"><option value="All">All Status</option><option value="Verified">Verified</option><option value="Pending">Pending</option></select>
 <button onclick="loadData()">Refresh</button>
 </div>
 <div class="grid" id="kpis"></div>
-<div class="grid" id="partnerCards" style="margin-top:16px"></div>
-<div class="row">
+<div class="charts">
 <canvas id="lineChart"></canvas>
-<canvas id="donutChart"></canvas>
+<canvas id="pieChart"></canvas>
 </div>
-<div style="margin-top:16px">
+<div class="tablebox">
 <table>
 <thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
-<tbody id="tableBody"></tbody>
+<tbody id="tbody"></tbody>
 </table>
 </div>
 </div>
@@ -50,26 +34,17 @@ th{background:#0b1220}
 const sheets=[
 {name:'Webfolks',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv'},
 {name:'Medrays',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv'},
-{name:'Axximum',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv'}
-];
-
-let allData=[]; let lineChart, donutChart;
-function csvUrl(url){return url}
-function isMonthRow(v){if(!v)return false;return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(v.toString().trim())}
-function num(v){return parseFloat((v||'0').toString().replace(/,/g,''))||0}
-async function fetchSheet(sheet){const r=await fetch(csvUrl(sheet.url));const t=await r.text();const p=Papa.parse(t).data;return p.map(row=>({partner:sheet.name,month:(row[1]||'').toString().trim(),invoice:(row[2]||'').toString().trim(),amount:num(row[3]),verified:(row[4]||'').toString().trim().toLowerCase()==='verified'})).filter(x=>isMonthRow(x.month));
-function currency(v){return '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:0})}
-function latestMonth(data){const arr=[...new Set(data.map(x=>x.month))];return arr[arr.length-1]||''}
-async function loadData(){document.getElementById('kpis').innerHTML='Loading...';allData=(await Promise.all(sheets.map(fetchSheet))).flat();populateFilters();render();}
-function populateFilters(){const pf=document.getElementById('partnerFilter');pf.innerHTML='<option>All</option>'+sheets.map(s=>`<option>${s.name}</option>`).join('');}
-function filtered(){const p=document.getElementById('partnerFilter').value;const s=document.getElementById('statusFilter').value;return allData.filter(r=>(p==='All'||r.partner===p)&&(s==='All'||(s==='Verified'?r.verified:!r.verified)));}
-function render(){const data=filtered();const total=data.reduce((a,b)=>a+b.amount,0);const verified=data.filter(x=>x.verified).length;const lm=latestMonth(data);const latestTotal=data.filter(x=>x.month===lm).reduce((a,b)=>a+b.amount,0);
-document.getElementById('kpis').innerHTML=`<div class='card'><div class='label'>Total Invoiced</div><div class='value'>${currency(total)}</div></div><div class='card'><div class='label'>Verified Count</div><div class='value'>${verified}</div></div><div class='card'><div class='label'>Latest Month</div><div class='value'>${lm||'-'}</div></div><div class='card'><div class='label'>Latest Total</div><div class='value'>${currency(latestTotal)}</div></div>`;
-renderPartnerCards(data);renderTable(data);renderCharts(data);}
-function renderPartnerCards(data){const by={};data.forEach(r=>{if(!by[r.partner])by[r.partner]=[];by[r.partner].push(r)});document.getElementById('partnerCards').innerHTML=Object.keys(by).map(k=>{const rows=by[k];const total=rows.reduce((a,b)=>a+b.amount,0);const ver=rows.filter(x=>x.verified).length;const last=rows[rows.length-1]?.invoice||'-';return `<div class='card'><div class='label'>${k}</div><div>Total: ${currency(total)}</div><div>Verified: ${ver}</div><div>Latest: ${last}</div></div>`}).join('');}
-function renderTable(data){document.getElementById('tableBody').innerHTML=data.map(r=>`<tr><td>${r.partner}</td><td>${r.month}</td><td>${r.invoice}</td><td>${currency(r.amount)}</td><td>${r.verified?'Verified':'Pending'}</td></tr>`).join('');}
-function renderCharts(data){const months=[...new Set(data.map(x=>x.month))];const colors=['#38bdf8','#22c55e','#f59e0b'];const datasets=sheets.map((s,i)=>({label:s.name,data:months.map(m=>data.filter(x=>x.partner===s.name&&x.month===m).reduce((a,b)=>a+b.amount,0)),borderColor:colors[i],tension:.3}));if(lineChart)lineChart.destroy();lineChart=new Chart(document.getElementById('lineChart'),{type:'line',data:{labels:months,datasets},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'}}}}});const totals=sheets.map(s=>data.filter(x=>x.partner===s.name).reduce((a,b)=>a+b.amount,0));if(donutChart)donutChart.destroy();donutChart=new Chart(document.getElementById('donutChart'),{type:'doughnut',data:{labels:sheets.map(s=>s.name),datasets:[{data:totals}]},options:{plugins:{legend:{labels:{color:'#fff'}}}}});}
-document.getElementById('partnerFilter').onchange=render;document.getElementById('statusFilter').onchange=render;loadData();
+{name:'Axximum',url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv'}];
+let allData=[];let lineChart,pieChart;
+function isMonth(v){return /^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test((v||'').toString().trim())}
+function num(v){return parseFloat((v||0).toString().replace(/,/g,''))||0}
+function money(v){return '₹'+v.toLocaleString('en-IN')}
+async function fetchSheet(sheet){const txt=await fetch(sheet.url).then(r=>r.text());const rows=Papa.parse(txt).data;return rows.map(r=>({partner:sheet.name,month:(r[1]||'').trim(),invoice:(r[2]||'').trim(),amount:num(r[3]),verified:(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month));}
+async function loadData(){allData=(await Promise.all(sheets.map(fetchSheet))).flat();document.getElementById('partner').innerHTML='<option>All</option>'+sheets.map(s=>`<option>${s.name}</option>`).join('');render();}
+function getFiltered(){const p=partner.value,s=status.value;return allData.filter(r=>(p==='All'||r.partner===p)&&(s==='All'||(s==='Verified'?r.verified:!r.verified)));}
+function render(){const d=getFiltered();const total=d.reduce((a,b)=>a+b.amount,0);const ver=d.filter(x=>x.verified).length;const months=[...new Set(d.map(x=>x.month))];const latest=months[months.length-1]||'-';const latestTotal=d.filter(x=>x.month===latest).reduce((a,b)=>a+b.amount,0);kpis.innerHTML=`<div class='card'><div class='small'>TOTAL INVOICED</div><div class='big'>${money(total)}</div></div><div class='card'><div class='small'>VERIFIED COUNT</div><div class='big'>${ver}</div></div><div class='card'><div class='small'>LATEST MONTH</div><div class='big'>${latest}</div></div><div class='card'><div class='small'>LATEST TOTAL</div><div class='big'>${money(latestTotal)}</div></div>`;tbody.innerHTML=d.map(r=>`<tr><td>${r.partner}</td><td>${r.month}</td><td>${r.invoice}</td><td>${money(r.amount)}</td><td>${r.verified?'Verified':'Pending'}</td></tr>`).join('');drawCharts(d,months);}
+function drawCharts(d,months){const colors=['#38bdf8','#22c55e','#f59e0b'];const datasets=sheets.map((s,i)=>({label:s.name,data:months.map(m=>d.filter(x=>x.partner===s.name&&x.month===m).reduce((a,b)=>a+b.amount,0)),borderColor:colors[i],tension:.3}));if(lineChart)lineChart.destroy();lineChart=new Chart(lineChart=document.getElementById('lineChart'),{type:'line',data:{labels:months,datasets},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'}}}}});const totals=sheets.map(s=>d.filter(x=>x.partner===s.name).reduce((a,b)=>a+b.amount,0));if(pieChart)pieChart.destroy();pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:sheets.map(s=>s.name),datasets:[{data:totals}]},options:{plugins:{legend:{labels:{color:'#fff'}}}}});}
+partner.onchange=render;status.onchange=render;loadData();
 </script>
 </body>
 </html>
