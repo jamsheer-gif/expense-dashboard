@@ -618,20 +618,17 @@ function parseOverviewRows(rows, partnerName) {
   const invoices = [];
   if (!rows || rows.length === 0) return invoices;
 
-  const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec',
-                  'january','february','march','april','june','july','august','september','october','november','december'];
-
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length < 1) continue;
-    const firstCell = String(row[0] || '').trim().toLowerCase();
-    const isMonthRow = MONTHS.some(m => firstCell.startsWith(m));
+    const firstCell = String(row[0] || '').trim().replace(/['"]/g, '').toLowerCase();
+    const isMonthRow = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(firstCell);
     if (!isMonthRow) continue;
 
-    const month = String(row[0] || '').trim();
-    const invoiceNum = String(row[1] || '').trim();
-    const amountRaw = String(row[2] || '0').replace(/,/g, '').replace(/[^\d.]/g, '');
-    const status = String(row[3] || '').trim();
+    const month = String(row[0] || '').trim().replace(/['"]/g, '');
+    const invoiceNum = String(row[1] || '').trim().replace(/['"]/g, '');
+    const amountRaw = String(row[2] || '0').replace(/[,'"]/g, '').replace(/[^\d.]/g, '');
+    const status = String(row[3] || '').trim().replace(/['"]/g, '');
     const amount = parseFloat(amountRaw) || 0;
 
     if (month) {
@@ -644,15 +641,13 @@ function parseOverviewRows(rows, partnerName) {
 function getMonthOrder(monthStr) {
   const MONTH_MAP = {
     'jan':0,'feb':1,'mar':2,'apr':3,'may':4,'jun':5,
-    'jul':6,'aug':7,'sep':8,'oct':9,'nov':10,'dec':11,
-    'january':0,'february':1,'march':2,'april':3,'june':5,
-    'july':6,'august':7,'september':8,'october':9,'november':10,'december':11
+    'jul':6,'aug':7,'sep':8,'oct':9,'nov':10,'dec':11
   };
-  const lower = monthStr.toLowerCase();
+  const lower = monthStr.toLowerCase().trim();
   const parts = lower.split(/[-\s]/);
-  const mKey = parts[0];
-  const yRaw = parts[1] || '26';
-  const year = yRaw.length === 2 ? 2000 + parseInt(yRaw) : parseInt(yRaw);
+  const mKey = parts[0].substring(0, 3);
+  const yRaw = parts[parts.length - 1] || '2026';
+  const year = yRaw.length === 2 ? 2000 + parseInt(yRaw) : parseInt(yRaw) || 2026;
   const mIdx = MONTH_MAP[mKey] ?? 0;
   return year * 12 + mIdx;
 }
@@ -672,7 +667,11 @@ async function loadPartnerData(partner) {
     }
   }
   const rows = await fetchSheetCSV(partner.sheetId, gid);
-  return parseOverviewRows(rows, partner.name);
+  console.log(`[${partner.name}] Total rows: ${rows.length}`);
+  console.log(`[${partner.name}] First 5 rows:`, JSON.stringify(rows.slice(0, 5)));
+  const result = parseOverviewRows(rows, partner.name);
+  console.log(`[${partner.name}] Parsed ${result.length} invoices:`, result);
+  return result;
 }
 
 function formatINR(amount) {
