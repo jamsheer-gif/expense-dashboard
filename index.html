@@ -90,7 +90,7 @@ th {text-align:left}
   background:#1e293b;
   border-radius:10px;
   padding:10px;
-  height:300px; /* FIXED SMALL SIZE */
+  height:300px;
 }
 
 canvas {
@@ -116,12 +116,11 @@ canvas {
 
 <div class="controls">
   <select id="partner"></select>
+
   <select id="status">
     <option>All Status</option>
     <option>Verified</option>
   </select>
-
-  <select id="service" style="display:none"></select>
 
   <button id="openSheet">Open Partner Sheet</button>
   <button id="refresh">Refresh</button>
@@ -174,14 +173,13 @@ const sheets=[
 const els={
 partner:document.getElementById('partner'),
 status:document.getElementById('status'),
-service:document.getElementById('service'),
 open:document.getElementById('openSheet'),
 refresh:document.getElementById('refresh'),
 kpis:document.getElementById('kpis'),
 tbody:document.getElementById('tbody')
 };
 
-let data=[],serviceData={},chart;
+let data=[],chart;
 
 function num(x){return parseFloat(String(x).replace(/,/g,''))||0;}
 function isMonth(t){return /^[A-Za-z]+ \d{4}$/.test(t);}
@@ -190,43 +188,13 @@ async function fetchSheet(s){
  const t=await fetch(s.csv).then(r=>r.text());
  const rows=Papa.parse(t).data;
 
- const out=[];
-
- rows.forEach(r=>{
-  if(isMonth(r[1]) && num(r[3])>0){
-    out.push({
-      partner:s.name,
-      month:r[1],
-      invoice:r[2],
-      amount:num(r[3]),
-      verified:(r[4]||'').toLowerCase()==='verified'
-    });
-  }
- });
-
- // SERVICE PARSE (Webfolks only)
- if(s.name==='Webfolks'){
-   const services={};
-   let current=null;
-
-   rows.forEach(r=>{
-     if(r[13] && !r[14]){
-       current=r[13];
-       services[current]=[];
-     }
-
-     if(current && isMonth(r[14]) && num(r[16])>0){
-       services[current].push({
-         month:r[14],
-         amount:num(r[16])
-       });
-     }
-   });
-
-   serviceData=services;
- }
-
- return out;
+ return rows.map(r=>({
+  partner:s.name,
+  month:(r[1]||'').trim(),
+  invoice:(r[2]||'').trim(),
+  amount:num(r[3]),
+  verified:(r[4]||'').toLowerCase()==='verified'
+ })).filter(x=>isMonth(x.month) && x.amount>0);
 }
 
 async function load(){
@@ -250,29 +218,6 @@ function render(){
    d=d.filter(x=>x.verified);
  }
 
- // SERVICE FILTER
- if(els.partner.value==='Webfolks'){
-   els.service.style.display='inline-block';
-
-   els.service.innerHTML='<option>All Services</option>'+
-   Object.keys(serviceData).map(s=>`<option>${s}</option>`).join('');
-
-   if(els.service.value && els.service.value!=='All Services'){
-     const svc=serviceData[els.service.value]||[];
-     d=svc.map(x=>({
-       partner:'Webfolks',
-       month:x.month,
-       invoice:'-',
-       amount:x.amount,
-       verified:true
-     }));
-   }
-
- } else {
-   els.service.style.display='none';
- }
-
- // KPI
  const total=d.reduce((a,b)=>a+b.amount,0);
  const verified=d.filter(x=>x.verified).length;
  const latest=[...new Set(d.map(x=>x.month))].pop();
@@ -284,7 +229,6 @@ function render(){
  <div class='card'><div>Rows</div><div class='big'>${d.length}</div></div>
  `;
 
- // TABLE
  els.tbody.innerHTML=d.map(r=>`
  <tr>
  <td>${r.partner}</td>
@@ -295,9 +239,7 @@ function render(){
  </tr>
  `).join('');
 
- // CHART
  const months=[...new Set(d.map(x=>x.month))];
-
  const sums=months.map(m=>d.filter(x=>x.month===m).reduce((a,b)=>a+b.amount,0));
 
  if(chart) chart.destroy();
@@ -311,7 +253,6 @@ function render(){
 
 els.partner.onchange=render;
 els.status.onchange=render;
-els.service.onchange=render;
 els.refresh.onclick=load;
 
 els.open.onclick=()=>{
