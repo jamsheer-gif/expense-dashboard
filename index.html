@@ -1,89 +1,327 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
-<meta charset='UTF-8'>
-<meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infolks Outsourcing Expense Dashboard</title>
-<script src='https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#081225,#0f172a);color:#fff}header{padding:20px;font-size:28px;font-weight:700}.wrap{padding:20px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}select,button{padding:10px 14px;border:none;border-radius:10px}button{background:#22c55e;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#1e293b;padding:16px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.18)}.label{font-size:12px;color:#94a3b8}.value{font-size:30px;font-weight:700;margin-top:6px}.muted{font-size:12px;color:#94a3b8}.tablebox{margin-top:14px;background:#1e293b;border-radius:16px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #334155;text-align:left}th{background:#111827}.charts{display:grid;grid-template-columns:1fr .7fr;gap:14px;margin-top:14px;align-items:start}canvas{background:#1e293b;border-radius:16px;padding:10px;height:260px !important;max-height:260px;min-height:260px}@media(max-width:900px){.charts{grid-template-columns:1fr}}
+body {
+  margin:0;
+  font-family: Arial;
+  background: linear-gradient(135deg,#081225,#0f172a);
+  color:#fff;
+}
+
+header {
+  display:flex;
+  align-items:center;
+  gap:15px;
+  padding:20px;
+  font-size:24px;
+  font-weight:bold;
+}
+
+header img {
+  height:50px;
+  background:#fff;
+  padding:6px;
+  border-radius:8px;
+}
+
+.wrap {padding:20px}
+
+.controls {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+select,button {
+  padding:8px 12px;
+  border-radius:6px;
+  border:none;
+}
+
+button {
+  background:#22c55e;
+  cursor:pointer;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:12px;
+}
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+}
+
+.big {font-size:24px;font-weight:bold;}
+
+.tablebox {
+  margin-top:20px;
+  background:#1e293b;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td {
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+th {text-align:left}
+
+.charts {
+  margin-top:20px;
+  background:#1e293b;
+  border-radius:10px;
+  padding:10px;
+  height:300px; /* FIXED SMALL SIZE */
+}
+
+canvas {
+  height:260px !important;
+}
+
+.footer {
+  margin-top:10px;
+  font-size:12px;
+  color:#94a3b8;
+}
 </style>
 </head>
+
 <body>
-<header style='display:flex;align-items:center;gap:16px;flex-wrap:wrap'><img src='LOGO-07 (2).png' style='height:58px;width:auto;background:#fff;padding:6px 10px;border-radius:10px'><div><div>Infolks Outsourcing Expense Dashboard</div><div style='font-size:14px;color:#94a3b8;margin-top:6px;font-weight:400'>Executive Management View</div></div></header>
-<div class='wrap'>
-<div class='controls'>
-<select id='partner'></select>
-<select id='status'><option>All Status</option><option>Verified</option><option>Pending</option></select>
-<button id='openSheet'>Open Partner Sheet</button>
-<button id='refresh'>Refresh</button><button onclick='window.print()'>Export PDF</button>
+
+<header>
+  <img src="logo.png">
+  Infolks Outsourcing Expense Dashboard
+</header>
+
+<div class="wrap">
+
+<div class="controls">
+  <select id="partner"></select>
+  <select id="status">
+    <option>All Status</option>
+    <option>Verified</option>
+  </select>
+
+  <select id="service" style="display:none"></select>
+
+  <button id="openSheet">Open Partner Sheet</button>
+  <button id="refresh">Refresh</button>
+  <button onclick="window.print()">Export PDF</button>
 </div>
-<div class='grid' id='kpis'></div>
-<div class='grid' id='extra' style='margin-top:14px'></div>
-<div class='tablebox'><table><thead><tr><th>Partner</th><th>Month</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody id='tbody'></tbody></table></div>
-<div id='serviceWrap' style='margin-top:10px;display:none'>
-<select id='service'><option>All Services</option></select>
+
+<div class="grid" id="kpis"></div>
+
+<div class="tablebox">
+<table>
+<thead>
+<tr>
+<th>Partner</th>
+<th>Month</th>
+<th>Invoice</th>
+<th>Amount</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
 </div>
-<div class='charts'><canvas id='bar'></canvas><canvas id='pie'></canvas></div>
-<div class='muted' id='foot' style='margin-top:10px'></div><div class='muted' style='margin-top:6px'>Confidential internal dashboard • Prepared for management review</div>
+
+<div class="charts">
+<canvas id="bar"></canvas>
 </div>
+
+<div class="footer">
+Confidential internal dashboard • Prepared for management review
+</div>
+
+</div>
+
 <script>
-const els={partner:document.getElementById('partner'),status:document.getElementById('status'),service:document.getElementById('service'),serviceWrap:document.getElementById('serviceWrap'),open:document.getElementById('openSheet'),refresh:document.getElementById('refresh'),kpis:document.getElementById('kpis'),extra:document.getElementById('extra'),tbody:document.getElementById('tbody'),foot:document.getElementById('foot')};
+
 const sheets=[
-{name:'Webfolks',csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv',sheet:'https://docs.google.com/spreadsheets/d/15MT_t8xljl1uwrz8IeQ2R9jACQM8uVBtFuHXdD9xnrM/edit#gid=1508030208'},
-{name:'Medrays',csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv',sheet:'https://docs.google.com/spreadsheets/d/1KItTFr7YHFwKu44QMoxdnfHd4a3LzDWO2eL66vkxAx4/edit#gid=1508030208'},
-{name:'Axximum',csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv',sheet:'https://docs.google.com/spreadsheets/d/1891aa7KGYBMfgFrHwz9GodEG-ZDViMExXvOCanTLkVE/edit#gid=1508030208'}];
-let rows=[],serviceData={},barChart,pieChart;const colors=['#38bdf8','#22c55e','#f59e0b'];
-const money=v=>'₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:2});
-const num=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
-const isMonth=v=>/^(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(String(v||'').trim());
-async function fetchOne(s){
+{name:'Webfolks',
+ csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSK9Fl1JcZHBBWLGWVNvHCxu5H2u-eKaT2ROV9_CvUao11L0C63DvsozyhKP6oeQlggpIwrxTW0viVj/pub?gid=1508030208&single=true&output=csv',
+ link:'https://docs.google.com/spreadsheets/d/15MT_t8xljl1uwrz8IeQ2R9jACQM8uVBtFuHXdD9xnrM'},
+
+{name:'Medrays',
+ csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQs_Z1gUwN-Yq33HyYHixzEM3ukiAk45r2PciUIfmtJCK3KkxgugfPbiM6Thp0H9_hsDC1AWMfKPbnw/pub?gid=1508030208&single=true&output=csv',
+ link:'https://docs.google.com/spreadsheets/d/1KItTFr7YHFwKu44QMoxdnfHd4a3LzDWO2eL66vkxAx4'},
+
+{name:'Axximum',
+ csv:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWKrJExkAA7cGnEl_LV_LuXorPilyiQJyRCbUIfiuNI71aLotZoSxp6JyX3xtdFbQw9ecURLZja8uy/pub?gid=1508030208&single=true&output=csv',
+ link:'https://docs.google.com/spreadsheets/d/1891aa7KGYBMfgFrHwz9GodEG-ZDViMExXvOCanTLkVE'}
+];
+
+const els={
+partner:document.getElementById('partner'),
+status:document.getElementById('status'),
+service:document.getElementById('service'),
+open:document.getElementById('openSheet'),
+refresh:document.getElementById('refresh'),
+kpis:document.getElementById('kpis'),
+tbody:document.getElementById('tbody')
+};
+
+let data=[],serviceData={},chart;
+
+function num(x){return parseFloat(String(x).replace(/,/g,''))||0;}
+function isMonth(t){return /^[A-Za-z]+ \d{4}$/.test(t);}
+
+async function fetchSheet(s){
  const t=await fetch(s.csv).then(r=>r.text());
- const data=Papa.parse(t).data;
+ const rows=Papa.parse(t).data;
 
- // normal invoice parsing
- const invoice=data.map(r=>({partner:s.name,month:String(r[1]||'').trim(),invoice:String(r[2]||'').trim(),amount:num(r[3]),verified:String(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month)&&x.amount>0);
+ const out=[];
 
- // service parsing ONLY for Webfolks
+ rows.forEach(r=>{
+  if(isMonth(r[1]) && num(r[3])>0){
+    out.push({
+      partner:s.name,
+      month:r[1],
+      invoice:r[2],
+      amount:num(r[3]),
+      verified:(r[4]||'').toLowerCase()==='verified'
+    });
+  }
+ });
+
+ // SERVICE PARSE (Webfolks only)
  if(s.name==='Webfolks'){
-  const services={};
-  data.forEach(row=>{
-    const maybeService=row[13]; // col N
-    const month=row[14]; // col O
-    const amount=row[16]; // col Q
-    if(maybeService && !month && !amount){
-      services[maybeService]=[];
-    }
-    if(month && isMonth(month) && amount){
-      const keys=Object.keys(services);
-      if(keys.length){
-        const last=keys[keys.length-1];
-        services[last].push({month:String(month).trim(),amount:num(amount)});
-      }
-    }
-  });
-  serviceData=services;
+   const services={};
+   let current=null;
+
+   rows.forEach(r=>{
+     if(r[13] && !r[14]){
+       current=r[13];
+       services[current]=[];
+     }
+
+     if(current && isMonth(r[14]) && num(r[16])>0){
+       services[current].push({
+         month:r[14],
+         amount:num(r[16])
+       });
+     }
+   });
+
+   serviceData=services;
  }
 
- return invoice;
-}(r=>({partner:s.name,month:String(r[1]||'').trim(),invoice:String(r[2]||'').trim(),amount:num(r[3]),verified:String(r[4]||'').trim().toLowerCase()==='verified'})).filter(x=>isMonth(x.month)&&x.amount>0);} 
-async function load(){els.kpis.innerHTML='<div class="card">Loading...</div>';rows=(await Promise.all(sheets.map(fetchOne))).flat();els.partner.innerHTML='<option>All Partners</option>'+sheets.map(s=>'<option>'+s.name+'</option>').join('');render();els.foot.textContent='Last updated: '+new Date().toLocaleString();}
-function getData(){const p=els.partner.value,s=els.status.value;return rows.filter(r=>(p==='All Partners'||r.partner===p)&&(s==='All Status'||(s==='Verified'?r.verified:!r.verified)));}
+ return out;
+}
+
+async function load(){
+ data=(await Promise.all(sheets.map(fetchSheet))).flat();
+
+ els.partner.innerHTML='<option>All Partners</option>'+
+ sheets.map(s=>`<option>${s.name}</option>`).join('');
+
+ render();
+}
+
 function render(){
- const p=els.partner.value;
- if(p==='Webfolks'){
-   els.serviceWrap.style.display='block';
-   els.service.innerHTML='<option>All Services</option>'+Object.keys(serviceData).map(s=>`<option>${s}</option>`).join('');
- }else{
-   els.serviceWrap.style.display='none';
- }let d=getData();
- const selectedService=els.service.value;
- if(els.partner.value==='Webfolks' && selectedService && selectedService!=='All Services'){
-   const svc=serviceData[selectedService]||[];
-   d=svc.map(x=>({partner:'Webfolks',month:x.month,invoice:'-',amount:x.amount,verified:true}));
- }const total=d.reduce((a,b)=>a+b.amount,0);const verified=d.filter(x=>x.verified).length;const months=[...new Set(d.map(x=>x.month))];const latest=months[months.length-1]||'-';const prev=months[months.length-2]||latest;const latestVal=d.filter(x=>x.month===latest).reduce((a,b)=>a+b.amount,0);const prevVal=d.filter(x=>x.month===prev).reduce((a,b)=>a+b.amount,0);const growth=prevVal?((latestVal-prevVal)/prevVal*100):0;els.kpis.innerHTML=`<div class='card'><div class='label'>TOTAL INVOICED</div><div class='value'>${money(total)}</div></div><div class='card'><div class='label'>VERIFIED COUNT</div><div class='value'>${verified}</div></div><div class='card'><div class='label'>LATEST MONTH</div><div class='value'>${latest}</div></div><div class='card'><div class='label'>LATEST TOTAL</div><div class='value'>${money(latestVal)}</div></div>`;els.extra.innerHTML=`<div class='card'><div class='label'>MONTHLY GROWTH</div><div class='value' style='font-size:24px'>${growth.toFixed(1)}%</div></div><div class='card'><div class='label'>AVG INVOICE</div><div class='value' style='font-size:24px'>${money(d.length?total/d.length:0)}</div></div><div class='card'><div class='label'>ACTIVE PARTNERS</div><div class='value' style='font-size:24px'>${new Set(d.map(x=>x.partner)).size}</div></div><div class='card'><div class='label'>PENDING</div><div class='value' style='font-size:24px'>${d.filter(x=>!x.verified).length}</div></div>`;els.tbody.innerHTML=d.map(r=>`<tr><td>${r.partner}</td><td>${r.month}</td><td>${r.invoice}</td><td>${money(r.amount)}</td><td>${r.verified?'Verified':'Pending'}</td></tr>`).join('');draw(d,months);} 
-function draw(d,months){const selected=els.partner.value;const use=(selected==='All Partners')?sheets:sheets.filter(x=>x.name===selected);const datasets=use.map((s,i)=>({label:s.name,data:months.map(m=>d.filter(x=>x.partner===s.name&&x.month===m).reduce((a,b)=>a+b.amount,0)),backgroundColor:colors[i],borderRadius:8}));if(barChart)barChart.destroy();barChart=new Chart(document.getElementById('bar'),{type:'bar',data:{labels:months,datasets},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'}}}}});const totals=use.map(s=>d.filter(x=>x.partner===s.name).reduce((a,b)=>a+b.amount,0));if(pieChart)pieChart.destroy();pieChart=new Chart(document.getElementById('pie'),{type:'doughnut',data:{labels:use.map(x=>x.name),datasets:[{data:totals,backgroundColor:colors}]},options:{plugins:{legend:{labels:{color:'#fff'}}}}});}
-els.partner.onchange=render;els.service.onchange=render;els.status.onchange=render;els.refresh.onclick=load;els.open.onclick=()=>{const v=els.partner.value;if(v==='All Partners'){alert('Select a partner first');return;}const f=sheets.find(x=>x.name===v);window.open(f.sheet,'_blank');};load();
+
+ let d=data;
+
+ if(els.partner.value!=='All Partners'){
+   d=d.filter(x=>x.partner===els.partner.value);
+ }
+
+ if(els.status.value==='Verified'){
+   d=d.filter(x=>x.verified);
+ }
+
+ // SERVICE FILTER
+ if(els.partner.value==='Webfolks'){
+   els.service.style.display='inline-block';
+
+   els.service.innerHTML='<option>All Services</option>'+
+   Object.keys(serviceData).map(s=>`<option>${s}</option>`).join('');
+
+   if(els.service.value && els.service.value!=='All Services'){
+     const svc=serviceData[els.service.value]||[];
+     d=svc.map(x=>({
+       partner:'Webfolks',
+       month:x.month,
+       invoice:'-',
+       amount:x.amount,
+       verified:true
+     }));
+   }
+
+ } else {
+   els.service.style.display='none';
+ }
+
+ // KPI
+ const total=d.reduce((a,b)=>a+b.amount,0);
+ const verified=d.filter(x=>x.verified).length;
+ const latest=[...new Set(d.map(x=>x.month))].pop();
+
+ els.kpis.innerHTML=`
+ <div class='card'><div>Total</div><div class='big'>₹${total.toLocaleString()}</div></div>
+ <div class='card'><div>Verified</div><div class='big'>${verified}</div></div>
+ <div class='card'><div>Latest Month</div><div class='big'>${latest||'-'}</div></div>
+ <div class='card'><div>Rows</div><div class='big'>${d.length}</div></div>
+ `;
+
+ // TABLE
+ els.tbody.innerHTML=d.map(r=>`
+ <tr>
+ <td>${r.partner}</td>
+ <td>${r.month}</td>
+ <td>${r.invoice}</td>
+ <td>₹${r.amount.toLocaleString()}</td>
+ <td>${r.verified?'Verified':''}</td>
+ </tr>
+ `).join('');
+
+ // CHART
+ const months=[...new Set(d.map(x=>x.month))];
+
+ const sums=months.map(m=>d.filter(x=>x.month===m).reduce((a,b)=>a+b.amount,0));
+
+ if(chart) chart.destroy();
+
+ chart=new Chart(document.getElementById('bar'),{
+  type:'bar',
+  data:{labels:months,datasets:[{label:'Amount',data:sums}]}
+ });
+
+}
+
+els.partner.onchange=render;
+els.status.onchange=render;
+els.service.onchange=render;
+els.refresh.onclick=load;
+
+els.open.onclick=()=>{
+ const s=sheets.find(x=>x.name===els.partner.value);
+ if(s) window.open(s.link,'_blank');
+};
+
+load();
+
 </script>
-</body></html>
+
+</body>
+</html>
